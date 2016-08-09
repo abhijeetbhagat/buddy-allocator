@@ -8,6 +8,7 @@ struct BlockDesc{
 
 struct BuddyAllocator{
     arena : Vec<u8>,
+    heap_size : usize,
     free_list : HashMap<u8, Vec<BlockDesc>>
 }
 
@@ -25,6 +26,7 @@ impl BuddyAllocator{
         }
         BuddyAllocator{
             arena : v,
+            heap_size : heap_size,
             free_list : m
         }
     }
@@ -32,10 +34,15 @@ impl BuddyAllocator{
     fn alloc<T>(&mut self) -> *mut T{
         let size_needed = std::mem::size_of::<T>();
         let adjusted_size = BuddyAllocator::get_adjusted_size(size_needed);
-        println!("size needed : {}, rounded size : {}", size_needed, adjusted_size);
-        /*if self.free_list[adjusted_size].is_empty(){
+        if adjusted_size as usize > self.heap_size {
+            panic!("Out of memory!");
+        }
 
-        }*/
+        println!("size needed : {}, rounded size : {}", size_needed, adjusted_size);
+        if self.free_list[&adjusted_size].is_empty(){
+
+            
+        }
         self.arena[0..4].as_mut_ptr() as *mut T 
     }
 
