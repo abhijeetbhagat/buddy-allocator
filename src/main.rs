@@ -99,7 +99,7 @@ impl BuddyAllocator{
                                           end);
                 self.blocks_tree.push(right);
 
-                if size == requested_size{
+                if middle == requested_size{
                     self.blocks_tree.last_mut().unwrap().is_free = false;
                     return Some(&self.blocks_tree[left_child_index]); 
                 }
@@ -142,4 +142,14 @@ fn test_get_adjusted_order(){
     assert_eq!(BuddyAllocator::get_adjusted_order(32usize), 5u8);
     assert_eq!(BuddyAllocator::get_adjusted_order(1usize), 2u8);
     assert_eq!(BuddyAllocator::get_adjusted_order(0usize), 2u8);
+}
+
+#[test]
+fn test_get_block(){
+    let mut ba = BuddyAllocator::new(64);
+    {
+        let block_desc = ba.get_block(32).unwrap();
+    }
+    assert_eq!(ba.blocks_tree.len(), 3);
+
 }
