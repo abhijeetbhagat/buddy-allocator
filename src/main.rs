@@ -62,54 +62,28 @@ impl BuddyAllocator{
 
     fn get_block(&mut self, requested_size : usize) -> Option<&BlockDesc>{
         if self.blocks_tree.is_empty(){
-            let mut start = 0;
-            let mut end = self.heap_size - 1;
             let mut size = self.heap_size;
-
-            //create root
-            let block = BlockDesc::new(false,
-                                       size,
-                                       start,
-                                       end);
-            self.blocks_tree.push(block);
-            if size == requested_size{
-                return self.blocks_tree.last();
-            }
-
-            let mut left_child_index = 1;
+            let height = self.get_level(self.min_block_size);
 
             //create left and right
-            loop{
-
-                let middle = size / 2;
-
-                let left = BlockDesc::new(true,
-                                          size,
-                                          start,
-                                          middle - 1);
-                self.blocks_tree.push(left);
-                /*if size == requested_size{
-                    self.blocks_tree.last_mut().is_free = false;
-                    return self.blocks_tree.last(); 
-                }*/
-
-                let right = BlockDesc::new(true,
-                                          size,
-                                          middle,
-                                          end);
-                self.blocks_tree.push(right);
-
-                if middle == requested_size{
-                    self.blocks_tree.last_mut().unwrap().is_free = false;
-                    return Some(&self.blocks_tree[left_child_index]); 
-                }
-
-                left_child_index = 2 * left_child_index + 1;
-                size = middle;
-                end = middle - 1;
+            for i in 0..(2i32.pow(height + 1) - 1){ //level loop
+                self.blocks_tree.push(BlockDesc::new(true,
+                                                     0,
+                                                     0,
+                                                     0));
             }
         }
-        None
+
+        let (start, end) = BuddyAllocator::get_block_range_start_end(self.get_level(requested_size));
+        for i in start..end+1{
+            if self.blocks_tree[i as usize].is_free{
+                return Some(&self.blocks_tree[i as usize])
+            }
+        }
+
+        panic!("No block found");
+        //TODO run garbage collection here?
+
     }
 
     fn get_adjusted_order(size : usize) -> u8{
@@ -122,6 +96,21 @@ impl BuddyAllocator{
             }
         }
         order 
+    }
+
+    fn get_level(&self, block_size : usize) -> u32{
+        let mut a = self.heap_size;
+        let mut level = 0;
+        while a != block_size{
+            a /= 2;
+            level += 1;
+        }
+        level
+    }
+    
+    fn get_block_range_start_end(level : u32) -> (u32, u32){
+        let start = 2i32.pow(level) - 1;
+        (start as u32, (start * 2) as u32)
     }
 }
 
@@ -144,12 +133,28 @@ fn test_get_adjusted_order(){
     assert_eq!(BuddyAllocator::get_adjusted_order(0usize), 2u8);
 }
 
+
+#[test]
+fn test_get_level(){
+    let ba = BuddyAllocator::new(16);
+    assert_eq!(ba.get_level(2), 3);
+    assert_eq!(ba.get_level(4), 2);
+    assert_eq!(ba.get_level(8), 1);
+    assert_eq!(ba.get_level(16), 0);
+}
+
+#[test]
+fn test_get_block_range_start_end(){
+    let ba = BuddyAllocator::new(16);
+    assert_eq!(BuddyAllocator::get_block_range_start_end(ba.get_level(2)), (7, 14));
+    assert_eq!(BuddyAllocator::get_block_range_start_end(ba.get_level(4)), (3, 6));
+    assert_eq!(BuddyAllocator::get_block_range_start_end(ba.get_level(8)), (1, 2));
+    assert_eq!(BuddyAllocator::get_block_range_start_end(ba.get_level(16)), (0, 0));
+}
+
 #[test]
 fn test_get_block(){
-    let mut ba = BuddyAllocator::new(64);
-    {
-        let block_desc = ba.get_block(32).unwrap();
-    }
-    assert_eq!(ba.blocks_tree.len(), 3);
-
+    let mut ba = BuddyAllocator::new(16);
+    ba.get_block(16);
+    assert_eq!(ba.blocks_tree.len(), 7);
 }
