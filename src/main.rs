@@ -51,16 +51,16 @@ impl BuddyAllocator{
             panic!("Out of memory!");
         }
 
-        println!("size needed : {}, rounded size : {}", size_needed, adjusted_order);
+        println!("size needed : {}, rounded order : {}", size_needed, adjusted_order);
         let required_size = 2i32.pow(adjusted_order as u32) as usize;
 
-        let desc = self.get_block(required_size);
+        return self.get_block(required_size);
 
-        //self.arena[0..4].as_mut_ptr() as *mut T 
-        std::ptr::null_mut()
+
+        panic!("Out of memory exception");
     }
-
-    fn get_block(&mut self, requested_size : usize) -> Option<&BlockDesc>{
+    
+    fn get_block<T>(&mut self, requested_size : usize) -> *mut T{
         if self.blocks_tree.is_empty(){
             let mut size = self.heap_size;
             let height = self.get_level(self.min_block_size);
@@ -86,13 +86,13 @@ impl BuddyAllocator{
         let (start, end) = BuddyAllocator::get_block_range_start_end(self.get_level(requested_size));
         for i in start..end+1{
             if self.blocks_tree[i as usize].is_free{
-                //self.blocks_tree[i as usize].start = ;
-                return Some(&self.blocks_tree[i as usize])
+                self.blocks_tree[i as usize].is_free = false;
+                return self.arena[self.blocks_tree[i as usize].start..self.blocks_tree[i as usize].end + 1].as_mut_ptr() as *mut T 
             }
         }
 
         //TODO run garbage collection here?
-        None
+        std::ptr::null_mut()
 
     }
 
@@ -165,22 +165,15 @@ fn test_get_block_range_start_end(){
 #[test]
 fn test_get_block(){
     let mut ba = BuddyAllocator::new(16);
-    ba.get_block(16);
+    ba.get_block::<i32>(16);
     assert_eq!(ba.blocks_tree.len(), 7);
 }
 
-#[test]
-fn test_get_block_is_free(){
-    let mut ba = BuddyAllocator::new(16);
-    let b = ba.get_block(16);
-    assert!(b.unwrap().is_free);
-    assert!(b.unwrap().start == 0);
-}
 
 #[test]
 fn test_blocks_tree_creation(){
     let mut ba = BuddyAllocator::new(16);
-    ba.get_block(16);
+    ba.get_block::<i32>(16);
     assert_eq!(ba.blocks_tree.len(), 7);
     assert_eq!(ba.blocks_tree[0].start, 0);
     assert_eq!(ba.blocks_tree[0].end, 15);
@@ -194,6 +187,19 @@ fn test_blocks_tree_creation(){
     assert_eq!(ba.blocks_tree[4].end, 7);
 
     let mut ba = BuddyAllocator::new(32);
-    ba.get_block(16);
+    ba.get_block::<i32>(16);
     assert_eq!(ba.blocks_tree.len(), 15);
+}
+
+#[test]
+fn test_data_store_i32(){
+    let mut ba = BuddyAllocator::new(16);
+
+    unsafe{
+        let mut p = ba.alloc::<i32>();
+        assert!(!ba.blocks_tree[3].is_free);
+        assert!(ba.blocks_tree[4].is_free);
+        *p = 4;
+        assert_eq!(*p, 4);
+    }
 }
