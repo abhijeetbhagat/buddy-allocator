@@ -62,27 +62,41 @@ impl BuddyAllocator{
 
     fn get_block(&mut self, requested_size : usize) -> Option<&BlockDesc>{
         if self.blocks_tree.is_empty(){
+                println!("asd");
             let mut size = self.heap_size;
             let height = self.get_level(self.min_block_size);
 
+            println!("{}", height);
             //create left and right
-            for i in 0..(2i32.pow(height + 1) - 1){ //level loop
-                self.blocks_tree.push(BlockDesc::new(true,
-                                                     0,
-                                                     0,
-                                                     0));
+            for i in 0..height + 1{
+                let mut start = 0;
+                let mut end = size - 1;
+                for j in 0..(2i32.pow(i)){ //lateral loop
+
+                println!("asd");
+                    self.blocks_tree.push(BlockDesc::new(true,
+                                                         size,
+                                                         start,
+                                                         end));
+                    start = end + 1;
+                    end += size - 1;
+                }
+                size /= 2;
+                println!("asd");
+
             }
         }
 
         let (start, end) = BuddyAllocator::get_block_range_start_end(self.get_level(requested_size));
         for i in start..end+1{
             if self.blocks_tree[i as usize].is_free{
+                //self.blocks_tree[i as usize].start = ;
                 return Some(&self.blocks_tree[i as usize])
             }
         }
 
-        panic!("No block found");
         //TODO run garbage collection here?
+        None
 
     }
 
@@ -157,4 +171,22 @@ fn test_get_block(){
     let mut ba = BuddyAllocator::new(16);
     ba.get_block(16);
     assert_eq!(ba.blocks_tree.len(), 7);
+}
+
+#[test]
+fn test_get_block_is_free(){
+    let mut ba = BuddyAllocator::new(16);
+    let b = ba.get_block(16);
+    assert!(b.unwrap().is_free);
+    assert!(b.unwrap().start == 0);
+}
+
+#[test]
+fn test_blocks_tree_creation(){
+    let mut ba = BuddyAllocator::new(16);
+    ba.get_block(16);
+    assert_eq!(ba.blocks_tree.len(), 7);
+    let mut ba = BuddyAllocator::new(32);
+    ba.get_block(16);
+    assert_eq!(ba.blocks_tree.len(), 15);
 }
