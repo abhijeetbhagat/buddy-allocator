@@ -62,27 +62,23 @@ impl BuddyAllocator{
 
     fn get_block(&mut self, requested_size : usize) -> Option<&BlockDesc>{
         if self.blocks_tree.is_empty(){
-                println!("asd");
             let mut size = self.heap_size;
             let height = self.get_level(self.min_block_size);
 
-            println!("{}", height);
             //create left and right
             for i in 0..height + 1{
                 let mut start = 0;
                 let mut end = size - 1;
                 for j in 0..(2i32.pow(i)){ //lateral loop
 
-                println!("asd");
                     self.blocks_tree.push(BlockDesc::new(true,
                                                          size,
                                                          start,
                                                          end));
                     start = end + 1;
-                    end += size - 1;
+                    end += start;
                 }
                 size /= 2;
-                println!("asd");
 
             }
         }
@@ -186,6 +182,17 @@ fn test_blocks_tree_creation(){
     let mut ba = BuddyAllocator::new(16);
     ba.get_block(16);
     assert_eq!(ba.blocks_tree.len(), 7);
+    assert_eq!(ba.blocks_tree[0].start, 0);
+    assert_eq!(ba.blocks_tree[0].end, 15);
+    assert_eq!(ba.blocks_tree[1].start, 0);
+    assert_eq!(ba.blocks_tree[1].end, 7);
+    assert_eq!(ba.blocks_tree[2].start, 8);
+    assert_eq!(ba.blocks_tree[2].end, 15);
+    assert_eq!(ba.blocks_tree[3].start, 0);
+    assert_eq!(ba.blocks_tree[3].end, 3);
+    assert_eq!(ba.blocks_tree[4].start, 4);
+    assert_eq!(ba.blocks_tree[4].end, 7);
+
     let mut ba = BuddyAllocator::new(32);
     ba.get_block(16);
     assert_eq!(ba.blocks_tree.len(), 15);
