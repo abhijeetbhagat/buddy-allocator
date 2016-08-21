@@ -44,7 +44,7 @@ impl BuddyAllocator{
         }
     }
 
-    fn alloc<T>(&mut self) -> *mut T{
+    fn alloc<T : Sized>(&mut self) -> *mut T{
         let size_needed = std::mem::size_of::<T>();
         let adjusted_order = BuddyAllocator::get_adjusted_order(size_needed) as u8;
         if adjusted_order as usize > self.heap_size {
@@ -69,7 +69,7 @@ impl BuddyAllocator{
             for i in 0..height + 1{
                 let mut start = 0;
                 let mut end = size - 1;
-                for j in 0..(2i32.pow(i)){ //lateral loop
+                for j in 0..(1 << i){ //lateral loop
 
                     self.blocks_tree.push(BlockDesc::new(true,
                                                          size,
@@ -203,3 +203,4 @@ fn test_data_store_i32(){
         assert_eq!(*p, 4);
     }
 }
+
