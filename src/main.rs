@@ -44,10 +44,14 @@ impl BuddyAllocator{
         }
     }
 
+    fn alloc_with_size<T>(&mut self, size: usize) -> *mut T{
+        unimplemented!();
+    }
+
     fn alloc<T : Sized>(&mut self) -> *mut T{
         let size_needed = std::mem::size_of::<T>();
         let adjusted_order = BuddyAllocator::get_adjusted_order(size_needed) as u8;
-        if adjusted_order as usize > self.heap_size {
+        if 1 << adjusted_order as usize > self.heap_size {
             panic!("Out of memory!");
         }
 
