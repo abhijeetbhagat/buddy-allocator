@@ -45,7 +45,31 @@ impl BuddyAllocator{
     }
 
     fn alloc_with_size<T>(&mut self, size: usize) -> *mut T{
-        unimplemented!();
+        let adjusted_order = BuddyAllocator::get_adjusted_order(size) as u8;
+        if 1 << adjusted_order as usize > self.heap_size {
+            panic!("Out of memory!");
+        }
+
+        //println!("size needed : {}, rounded order : {}", size_needed, adjusted_order);
+        let required_size = 2i32.pow(adjusted_order as u32) as usize;
+
+        let mut start = 0;
+        let mut end = 0;
+        {
+            let desc = self.get_block(required_size);
+
+            start = (desc.unwrap()).start;
+            end = desc.unwrap().end;
+
+        }
+
+        let num_elements = size / std::mem::size_of::<T>();
+        for i in start..end+1{
+            //self.arena[]
+        }
+
+        return self.arena[start..end + 1].as_mut_ptr() as *mut T ;
+
     }
 
     fn alloc<T : Sized>(&mut self) -> *mut T{
@@ -65,7 +89,6 @@ impl BuddyAllocator{
 
             start = (desc.unwrap()).start;
             end = desc.unwrap().end;
-
         }
 
         return self.arena[start..end + 1].as_mut_ptr() as *mut T ;
@@ -99,6 +122,11 @@ impl BuddyAllocator{
         for i in start..end+1{
             if self.blocks_tree[i as usize].is_free{
                 self.blocks_tree[i as usize].is_free = false;
+                let mut j = i;
+                while j != 0{
+                    j = (j - 1)/2;
+                    self.blocks_tree[j as usize].is_free = false; 
+                }
                 return Some(&self.blocks_tree[i as usize])            
             }
         }
@@ -213,6 +241,18 @@ fn test_data_store_i32(){
         assert!(ba.blocks_tree[4].is_free);
         *p = 4;
         assert_eq!(*p, 4);
+    }
+}
+
+#[test]
+fn test_allocation_causes_parents_marked(){
+    let mut ba = BuddyAllocator::new(16);
+
+    unsafe{
+        let mut p = ba.alloc::<i32>();
+        assert!(!ba.blocks_tree[3].is_free);
+        assert!(!ba.blocks_tree[1].is_free);
+        assert!(!ba.blocks_tree[0].is_free);
     }
 }
 
