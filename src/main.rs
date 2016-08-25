@@ -94,6 +94,22 @@ impl BuddyAllocator{
         return self.arena[start..end + 1].as_mut_ptr() as *mut T ;
         panic!("Out of memory exception");
     }
+
+    fn free<T>(&mut self, p : *mut T){
+        let p_size = std::mem::size_of::<T>();
+        let diff = p as usize - self.arena[0..].as_mut_ptr() as usize;
+        let i = diff / p_size;
+        let arena_index = i * p_size;
+
+        let (start, end) = BuddyAllocator::get_block_range_start_end(self.get_level(p_size));
+        //TODO can this loop be avoided 
+        for i in start..end+1{
+            if arena_index == self.blocks_tree[i as usize].start{
+                self.blocks_tree[i as usize].is_free = true;
+                break;
+            }
+        }
+    }
     
     fn get_block(&mut self, requested_size : usize) -> Option<&BlockDesc>{
         if self.blocks_tree.is_empty(){
@@ -245,6 +261,22 @@ fn test_data_store_i32(){
 }
 
 #[test]
+fn test_data_store_2_i32(){
+    let mut ba = BuddyAllocator::new(16);
+
+    unsafe{
+        let mut p = ba.alloc::<i32>();
+        assert!(!ba.blocks_tree[3].is_free);
+        assert!(ba.blocks_tree[4].is_free);
+        *p = 4;
+        assert_eq!(*p, 4);
+
+        let mut p2 = ba.alloc::<i32>();
+        assert!(!ba.blocks_tree[4].is_free);
+    }
+}
+
+#[test]
 fn test_allocation_causes_parents_marked(){
     let mut ba = BuddyAllocator::new(16);
 
@@ -255,4 +287,19 @@ fn test_allocation_causes_parents_marked(){
         assert!(!ba.blocks_tree[0].is_free);
     }
 }
-
+#[test]
+fn test_free(){
+    let mut ba = BuddyAllocator::new(16);
+    unsafe{
+        let mut p = ba.alloc::<i32>();
+        assert!(!ba.blocks_tree[3].is_free);
+        ba.free::<i32>(p);
+        assert!(ba.blocks_tree[3].is_free);
+        let mut p2 = ba.alloc::<i32>();
+        assert!(!ba.blocks_tree[3].is_free);
+        ba.free::<i32>(p2);
+        assert!(ba.blocks_tree[3].is_free);
+        //let mut p3 = ba.alloc::<i32>();
+        //assert_eq!(ba.free::<i32>(p3), 8);
+    }
+}
