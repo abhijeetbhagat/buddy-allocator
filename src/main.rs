@@ -63,11 +63,6 @@ impl BuddyAllocator{
 
         }
 
-        let num_elements = size / std::mem::size_of::<T>();
-        for i in start..end+1{
-            //self.arena[]
-        }
-
         return self.arena[start..end + 1].as_mut_ptr() as *mut T ;
 
     }
