@@ -298,3 +298,18 @@ fn test_free(){
         //assert_eq!(ba.free::<i32>(p3), 8);
     }
 }
+
+#[test]
+fn test_little_endianness(){
+    let mut ba = BuddyAllocator::new(16);
+    unsafe{
+        let mut p = ba.alloc::<i32>();
+        *p = 4;
+        let u8_ptr : *const u8 = std::mem::transmute(p);
+        assert_eq!(*u8_ptr, 4);
+        assert_eq!(*u8_ptr.offset(1), 0);
+        assert_eq!(*u8_ptr.offset(2), 0);
+        assert_eq!(*u8_ptr.offset(3), 0);
+
+    }
+}
