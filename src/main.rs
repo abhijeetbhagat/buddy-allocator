@@ -17,12 +17,6 @@ impl BlockDesc{
     }
 }
 
-struct Node{
-    left : Option<Box<Node>>,
-    block_desc : BlockDesc,
-    right : Option<Box<Node>>,
-}
-
 struct BuddyAllocator{
     arena : Vec<u8>,
     heap_size : usize,
@@ -98,10 +92,33 @@ impl BuddyAllocator{
 
         let (start, end) = BuddyAllocator::get_block_range_start_end(self.get_level(p_size));
         //TODO can this loop be avoided 
+        let mut target_index = 0;
         for i in start..end+1{
             if arena_index == self.blocks_tree[i as usize].start{
                 self.blocks_tree[i as usize].is_free = true;
+                target_index = i;
                 break;
+            }
+        }
+
+        //go till root pairing up buddies
+        if target_index != 0{
+            while target_index != 0{
+                let mut sib_index =
+                if target_index & 1 == 1{
+                    target_index + 1
+                }
+                else{
+                    target_index - 1 
+                };
+
+                if self.blocks_tree[sib_index as usize].is_free{
+                    target_index = (target_index - 1) / 2;
+                    self.blocks_tree[target_index as usize].is_free = true; 
+                }
+                else{
+                    break;
+                }
             }
         }
     }
@@ -311,5 +328,22 @@ fn test_little_endianness(){
         assert_eq!(*u8_ptr.offset(2), 0);
         assert_eq!(*u8_ptr.offset(3), 0);
 
+    }
+}
+
+#[test]
+fn test_free_traverse_till_root_clubbing_buddies(){
+    let mut ba = BuddyAllocator::new(16);
+    unsafe{
+        let mut p = ba.alloc::<i32>();
+        assert!(!ba.blocks_tree[3].is_free);
+        assert!(!ba.blocks_tree[1].is_free);
+        assert!(!ba.blocks_tree[0].is_free);
+
+        ba.free::<i32>(p);
+
+        assert!(ba.blocks_tree[3].is_free);
+        assert!(ba.blocks_tree[1].is_free);
+        assert!(ba.blocks_tree[0].is_free);
     }
 }
