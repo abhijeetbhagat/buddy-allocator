@@ -45,7 +45,7 @@ impl BuddyAllocator{
         }
 
         //println!("size needed : {}, rounded order : {}", size_needed, adjusted_order);
-        let required_size = 2i32.pow(adjusted_order as u32) as usize;
+        let required_size = (1 << adjusted_order as u32) as usize;
 
         let mut start = 0;
         let mut end = 0;
